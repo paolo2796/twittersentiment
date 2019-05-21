@@ -72,7 +72,8 @@ object BatchAnalyzer {
     //Console.println("Elementi salvati in file.txt")
     saveClassifiedTweets(sentimentAnalysisRDD, PropertiesLoader.tweetsClassifiedPath)
     
-    
+        Console.println("Result prediction saved!");
+
   }
 
        /**
