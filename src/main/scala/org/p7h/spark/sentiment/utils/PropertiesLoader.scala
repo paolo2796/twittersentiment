@@ -20,6 +20,7 @@ object PropertiesLoader {
 
   val tweetsClassifiedPath = conf.getString("TWEETS_CLASSIFIED_ABSOLUTE_PATH")
 
+
   val consumerKey = conf.getString("CONSUMER_KEY")
   val consumerSecret = conf.getString("CONSUMER_SECRET")
   val accessToken = conf.getString("ACCESS_TOKEN_KEY")

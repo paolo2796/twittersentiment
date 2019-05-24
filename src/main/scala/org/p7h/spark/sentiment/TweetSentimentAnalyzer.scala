@@ -4,12 +4,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import org.apache.hadoop.io.compress.GzipCodec
-import org.apache.spark.SparkConf
-import org.apache.spark.mllib.classification.NaiveBayesModel
 import org.apache.spark.rdd.RDD
 import org.apache.spark.serializer.KryoSerializer
-import org.apache.spark.sql.SaveMode
 import org.apache.spark.streaming.twitter.TwitterUtils
 import org.apache.spark.streaming.{Durations, StreamingContext}
 import org.p7h.spark.sentiment.corenlp.CoreNLPSentimentAnalyzer
@@ -18,6 +14,18 @@ import org.p7h.spark.sentiment.utils._
 import redis.clients.jedis.Jedis
 import twitter4j.Status
 import twitter4j.auth.OAuthAuthorization
+import org.apache.spark.broadcast.Broadcast
+import org.apache.spark.mllib.classification.{NaiveBayes, NaiveBayesModel}
+import org.apache.spark.mllib.regression.LabeledPoint
+import org.apache.spark.sql._
+import org.apache.spark.sql.types
+import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.log4j.Logger
+import org.apache.spark.internal._
+import org.apache.hadoop.io.compress.GzipCodec
+import org.apache.spark.sql._
+import org.p7h.spark.sentiment.mllib._
+
 
 /**
   * Analyzes and predicts Twitter Sentiment in [near] real-time using Spark Streaming and Spark MLlib.
@@ -34,11 +42,16 @@ object TweetSentimentAnalyzer {
     val ssc = StreamingContext.getActiveOrCreate(createSparkStreamingContext)
     val simpleDateFormat = new SimpleDateFormat("EE MMM dd HH:mm:ss ZZ yyyy")
 
+
     LogUtils.setLogLevels(ssc.sparkContext)
 
     // Load Naive Bayes Model from the location specified in the config file.
     val naiveBayesModel = NaiveBayesModel.load(ssc.sparkContext, PropertiesLoader.naiveBayesModelPath)
+            Console.println("NaiveBayesModel Caricato");
+
     val stopWordsList = ssc.sparkContext.broadcast(StopwordsLoader.loadStopWords(PropertiesLoader.nltkStopWords))
+            Console.println("SSC after broadcast");
+
 
     /**
       * Predicts the sentiment of the tweet passed.
@@ -72,7 +85,11 @@ object TweetSentimentAnalyzer {
     }
 
     val oAuth: Some[OAuthAuthorization] = OAuthUtils.bootstrapTwitterOAuth()
+                Console.println("oAuth  Caricato");
+
     val rawTweets = TwitterUtils.createStream(ssc, oAuth)
+                    Console.println("raw tweets");
+
 
     // Save Raw tweets only if the flag is set to true.
     if (PropertiesLoader.saveRawTweets) {
@@ -88,8 +105,9 @@ object TweetSentimentAnalyzer {
     // This delimiter was chosen as the probability of this character appearing in tweets is very less.
     val DELIMITER = "¦"
     val tweetsClassifiedPath = PropertiesLoader.tweetsClassifiedPath
-    val classifiedTweets = rawTweets.filter(hasGeoLocation)
-      .map(predictSentiment)
+    val classifiedTweets = rawTweets.filter(hasGeoLocation).map(predictSentiment)
+
+                    Console.println("before foreachRDD");
 
     classifiedTweets.foreachRDD { rdd =>
       if (rdd != null && !rdd.isEmpty() && !rdd.partitions.isEmpty) {
@@ -215,5 +233,5 @@ object TweetSentimentAnalyzer {
     */
   def hasGeoLocation(status: Status): Boolean = {
     null != status.getGeoLocation
-  }
+  } 
 }

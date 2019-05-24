@@ -33,7 +33,7 @@ libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-streaming" % sparkVersion % "provided",
   "org.apache.spark" %% "spark-sql" % sparkVersion % "provided",
   "org.apache.spark" %% "spark-mllib" % sparkVersion % "provided",
-  "org.apache.spark" %% "spark-streaming-twitter" % "1.6.3",
+  "org.apache.bahir" %% "spark-streaming-twitter" % "2.3.0",
   "com.databricks" %% "spark-csv" % sparkCsvVersion,
   "edu.stanford.nlp" % "stanford-corenlp" % coreNlpVersion,
   "edu.stanford.nlp" % "stanford-corenlp" % coreNlpVersion classifier "models",
