@@ -182,13 +182,6 @@ $RECYCLE.BIN/
 # Mac crap
 .DS_Store
 
-
-#############
-## Python
-#############
-
-*.py[co]
-
 # Packages
 *.egg
 *.egg-info
