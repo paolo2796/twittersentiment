@@ -47,10 +47,10 @@ object TweetSentimentAnalyzer {
 
     // Load Naive Bayes Model from the location specified in the config file.
     val naiveBayesModel = NaiveBayesModel.load(ssc.sparkContext, PropertiesLoader.naiveBayesModelPath)
-            Console.println("NaiveBayesModel Caricato");
+    Console.println("NaiveBayesModel Caricato");
 
     val stopWordsList = ssc.sparkContext.broadcast(StopwordsLoader.loadStopWords(PropertiesLoader.nltkStopWords))
-            Console.println("SSC after broadcast");
+    Console.println("SSC after broadcast");
 
 
     /**
@@ -107,7 +107,7 @@ object TweetSentimentAnalyzer {
     val tweetsClassifiedPath = PropertiesLoader.tweetsClassifiedPath
     val classifiedTweets = rawTweets.filter(hasGeoLocation).map(predictSentiment)
 
-                    Console.println("before foreachRDD");
+    Console.println("before foreachRDD");
 
     classifiedTweets.foreachRDD { rdd =>
       if (rdd != null && !rdd.isEmpty() && !rdd.partitions.isEmpty) {

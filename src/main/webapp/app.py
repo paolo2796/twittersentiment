@@ -30,7 +30,7 @@ def stream():
 
 if __name__ == '__main__':
     formatter = logging.Formatter("%(asctime)s -- %(message)s")
-    handler = TimedRotatingFileHandler('/root/Spark-MLlib-Twitter-Sentiment-Analysis/Viz_Server.log',
+    handler = TimedRotatingFileHandler('/home/lubuntu/Desktop/SentimentAnalysis/Spark-MLlib-Twitter-Sentiment-Analysis-master/Viz_Server.log',
                                        when="d",
                                        interval=1,
                                        backupCount=50)
@@ -39,5 +39,5 @@ if __name__ == '__main__':
     app.logger.addHandler(handler)
     app.logger.setLevel(logging.INFO)
     app.run(threaded=True,
-    host='0.0.0.0',
+    host='127.0.0.1',
     port='9999')
