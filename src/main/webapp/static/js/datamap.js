@@ -62,25 +62,23 @@ var func = function(geo, data) {
     tip += "<h6>" + data.date + "</h6>";
     tip += "<h4>" + data.text + "</h4>";
     tip += "Spark MLlib:<font size='6em' color=" + determineColor(parseInt(data.fillKey)) + ">" + determineEmoji(parseInt(data.fillKey)) + "</font>";
-    tip += "<br>Stanford CoreNLP:<font size='6em' color=" + determineColor(parseInt(data.fillKey1)) + ">" + determineEmoji(parseInt(data.fillKey1)) + "</font>";
     return "<div class='hoverinfo tooltip'>" + tip + '</div>';
 }
 
 source.onmessage = function(event) {
 
-    //console.log(event.data);
+    console.log(event.data);
     if (event.data !== "1") {
         data = event.data.split("¦");
         var bubble = {
             "id": data[0],
             "name": data[1],
             "text": data[2],
-            "fillKey1": data[3],
-            "fillKey": data[4],
-            "latitude": data[5],
-            "longitude": data[6],
-            "pic": data[7],
-            "date": data[8]
+            "fillKey": data[3],
+            "latitude": data[4],
+            "longitude": data[5],
+            "pic": data[6],
+            "date": data[7]
         };
 
         var bubble_array = [];
@@ -89,21 +87,5 @@ source.onmessage = function(event) {
             popupTemplate: func
         });
     }
-
-    //Added these placeholders for future reference
-    /*d3.selectAll(".datamaps-bubble").on('click', function(bubble) {
-        console.log(bubble);
-    });
-
-    d3.selectAll('#worldmap').on('mouseout', function(info) {
-      if (d3.event.target.tagName == "circle"){
-      	console.log(d3.select(d3.event.target).data()[0],"out")
-      }
-    });
-    d3.selectAll('#worldmap').on('mouseover', function(info) {
-      if (d3.event.target.tagName == "circle"){
-      	console.log(d3.select(d3.event.target).data()[0],"over")
-      }
-    });*/
 
 };

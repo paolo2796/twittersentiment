@@ -8,7 +8,6 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.serializer.KryoSerializer
 import org.apache.spark.streaming.twitter.TwitterUtils
 import org.apache.spark.streaming.{Durations, StreamingContext}
-import org.p7h.spark.sentiment.corenlp.CoreNLPSentimentAnalyzer
 import org.p7h.spark.sentiment.mllib.MLlibSentimentAnalyzer
 import org.p7h.spark.sentiment.utils._
 import redis.clients.jedis.Jedis
@@ -47,36 +46,31 @@ object TweetSentimentAnalyzer {
 
     // Load Naive Bayes Model from the location specified in the config file.
     val naiveBayesModel = NaiveBayesModel.load(ssc.sparkContext, PropertiesLoader.naiveBayesModelPath)
-    Console.println("NaiveBayesModel Caricato");
 
     val stopWordsList = ssc.sparkContext.broadcast(StopwordsLoader.loadStopWords(PropertiesLoader.nltkStopWords))
-    Console.println("SSC after broadcast");
-
 
     /**
       * Predicts the sentiment of the tweet passed.
-      * Invokes Stanford Core NLP and MLlib methods for identifying the tweet sentiment.
+      * Invokes MLlib methods for identifying the tweet sentiment.
       *
       * @param status -- twitter4j.Status object.
-      * @return tuple with Tweet ID, Tweet Text, Core NLP Polarity, MLlib Polarity, Latitude, Longitude, Profile Image URL, Tweet Date.
+      * @return tuple with Tweet ID, Tweet Text, MLlib Polarity, Latitude, Longitude, Profile Image URL, Tweet Date.
       */
-    def predictSentiment(status: Status): (Long, String, String, Int, Int, Double, Double, String, String) = {
+    def predictSentiment(status: Status): (Long, String, String, Int, Double, Double, String, String) = {
       val tweetText = replaceNewLines(status.getText)
-      val (corenlpSentiment, mllibSentiment) = {
-        // If tweet is in English, compute the sentiment by MLlib and also with Stanford CoreNLP.
+      val (mllibSentiment) = {
+        // If tweet is in English, compute the sentiment by MLlib.
         if (isTweetInEnglish(status)) {
-          (CoreNLPSentimentAnalyzer.computeWeightedSentiment(tweetText),
-            MLlibSentimentAnalyzer.computeSentiment(tweetText, stopWordsList, naiveBayesModel))
+          (MLlibSentimentAnalyzer.computeSentiment(tweetText, stopWordsList, naiveBayesModel))
         } else {
           // TODO: all non-English tweets are defaulted to neutral.
           // TODO: this is a workaround :: as we cant compute the sentiment of non-English tweets with our current model.
-          (0, 0)
+          (0)
         }
       }
       (status.getId,
         status.getUser.getScreenName,
         tweetText,
-        corenlpSentiment,
         mllibSentiment,
         status.getGeoLocation.getLatitude,
         status.getGeoLocation.getLongitude,
@@ -85,11 +79,8 @@ object TweetSentimentAnalyzer {
     }
 
     val oAuth: Some[OAuthAuthorization] = OAuthUtils.bootstrapTwitterOAuth()
-                Console.println("oAuth  Caricato");
 
     val rawTweets = TwitterUtils.createStream(ssc, oAuth)
-                    Console.println("raw tweets");
-
 
     // Save Raw tweets only if the flag is set to true.
     if (PropertiesLoader.saveRawTweets) {
@@ -107,16 +98,14 @@ object TweetSentimentAnalyzer {
     val tweetsClassifiedPath = PropertiesLoader.tweetsClassifiedPath
     val classifiedTweets = rawTweets.filter(hasGeoLocation).map(predictSentiment)
 
-    Console.println("before foreachRDD");
-
     classifiedTweets.foreachRDD { rdd =>
       if (rdd != null && !rdd.isEmpty() && !rdd.partitions.isEmpty) {
         saveClassifiedTweets(rdd, tweetsClassifiedPath)
 
         // Now publish the data to Redis.
         rdd.foreach {
-          case (id, screenName, text, sent1, sent2, lat, long, profileURL, date) => {
-            val sentimentTuple = (id, screenName, text, sent1, sent2, lat, long, profileURL, date)
+          case (id, screenName, text, sent2, lat, long, profileURL, date) => {
+            val sentimentTuple = (id, screenName, text, sent2, lat, long, profileURL, date)
             // TODO -- Need to remove this and use "Spark-Redis" package for publishing to Redis.
             // TODO -- But could not figure out a way to Publish with "Spark-Redis" package though.
             // TODO -- Confirmed with the developer of "Spark-Redis" package that they have deliberately omitted the method for publishing to Redis from Spark.
@@ -159,14 +148,14 @@ object TweetSentimentAnalyzer {
     * Saves the classified tweets to the csv file.
     * Uses DataFrames to accomplish this task.
     *
-    * @param rdd                  tuple with Tweet ID, Tweet Text, Core NLP Polarity, MLlib Polarity, Latitude, Longitude, Profile Image URL, Tweet Date.
+    * @param rdd                  tuple with Tweet ID, Tweet Text, MLlib Polarity, Latitude, Longitude, Profile Image URL, Tweet Date.
     * @param tweetsClassifiedPath Location of saving the data.
     */
-  def saveClassifiedTweets(rdd: RDD[(Long, String, String, Int, Int, Double, Double, String, String)], tweetsClassifiedPath: String) = {
+  def saveClassifiedTweets(rdd: RDD[(Long, String, String, Int, Double, Double, String, String)], tweetsClassifiedPath: String) = {
     val now = "%tY%<tm%<td%<tH%<tM%<tS" format new Date
     val sqlContext = SQLContextSingleton.getInstance(rdd.sparkContext)
     import sqlContext.implicits._
-    val classifiedTweetsDF = rdd.toDF("ID", "ScreenName", "Text", "CoreNLP", "MLlib", "Latitude", "Longitude", "ProfileURL", "Date")
+    val classifiedTweetsDF = rdd.toDF("ID", "ScreenName", "Text", "MLlib", "Latitude", "Longitude", "ProfileURL", "Date")
     classifiedTweetsDF.coalesce(1).write
       .format("com.databricks.spark.csv")
       .option("header", "true")
